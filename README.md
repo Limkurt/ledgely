@@ -1,115 +1,105 @@
-# <p align="center"><img src="./public/logo.png" alt="Ledgely Logo" width="120" /><br>Ledgely</p>
+# <p align="center">Ledgely</p>
 
 <p align="center">
   <strong>A premium, modern, ultra-lean liquidation tracker and real-time treasury dashboard.</strong><br>
-  Designed for rapid, friction-free financial organizational workflows.
+  Designed for rapid, friction-free financial organizational workflows using a Supabase PostgreSQL backend.
 </p>
 
 ---
 
-By bypassing traditional heavy database infrastructure, **Ledgely** integrates directly with the Notion API—transforming a standard Notion workspace into a secure relational database, back-office CRM, and immutable audit log. 
+## ⚡ System Architecture
 
-Built for high-speed efficiency, Ledgely allows members to submit expense claims in seconds while providing treasurers with a responsive, high-performance console for real-time authorizations and dynamic budget monitoring.
+Ledgely leverages **Supabase PostgreSQL** for its database layer, paired with a Next.js App Router layout styled in a professional Slate-Grey and Mint-Green aesthetic.
 
----
-
----
-
-## 🤖 Development Prompt
-
-You are an expert Senior Solutions Architect and Full-Stack Engineer. 
-
-### Core Task
-Your task is to write a production-ready codebase for a rapid MVP of a Liquidation Tracker & Treasury Dashboard. The system must accommodate two user states: a member who can submit expense entries, and a treasurer who can review, approve/reject them, and view real-time organizational metrics.
-
-### Rigid Constraints (Non-Negotiable)
-1. **Time to Build:** The entire architecture must be straightforward enough for a single developer to fully implement, test, and deploy in **under 3 hours**.
-2. **Core Integration:** The system **must use Notion** as an explicit part of its data workflow.
-
-### Architectural & Engineering Challenge
-Because of the strict 3-hour time limit, traditional heavy infrastructure setups (such as spinning up full relational databases, writing complex multi-tenant authentication layers, implementing custom file-storage buckets, or managing separate backend routers) are highly discouraged unless they can be configured instantly. 
-
-As the Architect, evaluate how to best leverage the Notion integration to minimize database schema boilerplate, backend routing, or audit logging overhead. 
-
-### Expected Output
-Based on your architectural evaluation for speed, choose the most optimal framework, data-mutation engine, and lightweight state tracking mechanism. Then, output the complete, clean, typed code files required to run this app end-to-end. 
-
-Ensure your response includes:
-1. **Configuration Specs:** Any necessary environment variables or pre-requisite third-party setups (e.g., Notion workspace database properties).
-2. **Backend/Mutation Logic:** Code handling validated data submission, status updates, and immutable audit trail logging.
-3. **Frontend UI/Dashboard:** A clean, responsive single-page interface or layout split by roles. It must display core metrics (Total Allocation, Spent, Remaining Balance, Pending Authorization), a submission form for members, an actionable queue for the treasurer, and a historical transaction ledger.
-
-Provide the modular code files directly with minimal conversational fluff.
-
-## 📝 Documentation Prompt
-
-You are an expert Technical Writer and Agile Scrum Master specializing in rapid hacking sprints and lean software architecture.
-
-Generate a complete, production-grade Markdown (`.md`) implementation guide and sprint playbook for a "Rapid MVP: Liquidation Tracker & Notion Treasury Dashboard". This guide must document how to successfully build and deploy the application within a strict **3-hour time constraint**.
-
-### Required Documentation Sections:
-
-1. **Architectural Evaluation & Strategy**: Document why a lightweight, direct-integration architecture was chosen over a traditional heavy enterprise stack (e.g., decoupled relational databases, custom ORMs, heavy auth providers) to respect the 3-hour limit. Explain how the data layer is optimized.
-2. **Data Schema & Workspace Configuration**: Detail the explicit configuration requirements for the Notion integration workspace. Clearly list what tables, property names, and field types (text, numbers, statuses, selections, or dates) must be created manually before writing code.
-3. **3-Hour Timeboxing Blueprint**: Provide a strict, realistic timeline broken down into 60-minute milestones. Detail exactly what an engineer should focus on during Hour 1, Hour 2, and Hour 3 to avoid falling behind.
-4. **Core Code Implementation**: Present the complete, clean, modular code blueprint files required to run the application (including data integration configuration, mutation logic, and the dashboard frontend).
-5. **End-to-End Verification Sequence**: Provide a tactical, step-by-step testing checklist that a developer can execute in the final 10 minutes of the sprint to verify the layout, form submission, backend sync, and dashboard data changes work flawlessly.
-
-### Formatting Style:
-- Use clear Markdown formatting layout tools (headings, dividers, bold text).
-- Highlight prerequisites and credentials management using callouts or blockquotes.
-- Maintain an engineering-centric, direct, and pragmatic tone focused entirely on speed and execution.
-
----
-## 🎨 System Architecture & Optimization Strategy
-
-To achieve zero infrastructure bloat and maximize operational deployment speeds, Ledgely splits roles natively via lightweight state mechanics and leverages standard server rendering paradigms:
-
-| Architectural Layer | Ledgely Lean Implementation Strategy |
+| Architectural Layer | Implementation Strategy |
 | :--- | :--- |
-| **Data Tier & Backend CRM** | **Notion API Client** (`@notionhq/client`) acting natively as a unified data layer. Tables represent Expenses, Budgets, and Log events directly. |
-| **Authentication & Roles** | **Pre-Shared Static Access Tokens** parsed via URL parameters (`?role=member` vs `?role=treasurer`) inside a unified layout, avoiding heavy auth provider boilerplate. |
-| **File Storage** | **Direct Image/File URL Submission** via standard form input blocks or native Notion block attachments, eliminating third-party S3/bucket complexity. |
-| **Real-Time Synchronicity** | **On-Demand Cache Invalidation** driven natively through server component layout updates and quick structural revalidation pipelines (`revalidatePath`). |
+| **Data Tier** | **Supabase client** (`@supabase/supabase-js`) connecting directly to PostgreSQL tables. |
+| **Authentication & Roles** | **Pre-Shared Static Access Keys** parsed via URL search parameters (`?role=member` vs `?role=treasurer`) in a secure access gate, bypassing complex OAuth boilerplate. |
+| **Cache Invalidation** | **On-Demand Cache Invalidation** driven natively through Next.js server actions and layout updates (`revalidatePath`). |
 
 ---
 
-## 🗺️ Notion Workspace Schema Blueprint
+## 🚀 Setup & Installation
 
-Before initiating your local development cluster, manually instantiate **two independent databases** within a dedicated parent page inside your Notion Workspace. Share page access explicitly with your workspace's Internal Integration Token.
+### 1. Provision Database Tables
+Go to your **Supabase Dashboard** -> **SQL Editor** -> **New Query**, paste the following script, and click **Run**:
 
-### 1. Expense Records Database (`NOTION_EXPENSES_DB_ID`)
-* **`Title`** *(Title Property)* — Item Name / Short Description
-* **`Amount`** *(Number Property)* — Formatted as currency
-* **`Category`** *(Select Property)* — Options: `SUPPLIES`, `FOOD_AND_BEVERAGE`, `TRANSPORTATION`, `ACCOMMODATION`, `EQUIPMENT`, `MARKETING`, `UTILITIES`, `MISCELLANEOUS`
-* **`Status`** *(Status Property)* — Options: `Pending` (Default), `Approved`, `Rejected`
-* **`Submitted By`** *(Email Property)* — Submitting organizational coordinates
-* **`Receipt URL`** *(URL Property)* — Pointer to digital receipt asset
-* **`Rejection Note`** *(Text Property)* — Context captured on review actions
-* **`Date`** *(Date Property)* — Transaction timeline stamp
+```sql
+-- 1. Create the primary liquidation claims database table
+CREATE TABLE expenses (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  amount NUMERIC(12, 2) NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('supplies', 'transportation', 'equipment')),
+  status TEXT NOT NULL DEFAULT 'UNDER_REVIEW' CHECK (status IN ('UNDER_REVIEW', 'APPROVED', 'REJECTED')),
+  submitted_by TEXT NOT NULL,
+  receipt_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### 2. Live Budget & Audit Log Database (`NOTION_BUDGET_DB_ID`)
-* **`Activity / Action`** *(Title Property)* — Log descriptive index (e.g., `[APPROVED] Laboratory Jumper Wires`)
-* **`Type`** *(Select Property)* — Options: `LOG_ENTRY`, `BUDGET_ADJUSTMENT`
-* **`Amount Impact`** *(Number Property)* — Negative for outlays, positive for top-up injections
-* **`Timestamp`** *(Date Property)* — Structural creation timeline
+-- 2. Create the internal real-time operational audit log ledger
+CREATE TABLE budget_log (
+  id BIGSERIAL PRIMARY KEY,
+  activity_action TEXT NOT NULL,
+  entry_type TEXT NOT NULL DEFAULT 'LOG_ENTRY',
+  amount_impact NUMERIC(12, 2) NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 2. Local Environment Variables
+Create a `.env.local` file in the root of the project:
+
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+# Access Keys
+TREASURER_ACCESS_KEY=treasurer_2026
+MEMBER_ACCESS_KEY=member_2026
+```
+
+### 3. Run the App
+Install dependencies and launch the dev server:
+```bash
+npm install
+npm run dev
+```
 
 ---
 
-## 📁 Repository Directory Matrix
+## 📖 How to Use the Product
 
-```text
-ledgely/
-├── public/
-│   └── logo.png           # Your custom generated logo asset
-├── src/
-│   ├── app/
-│   │   ├── actions.ts     # High-speed server mutations engine (Zod validation + Notion sync)
-│   │   ├── layout.tsx     # Global styling sheet wrapping context
-│   │   └── page.tsx       # Unified role-aware dashboard (Dynamic server calculations)
-│   └── lib/
-│       └── notion.ts      # Notion Engine Client SDK initialization singleton
-├── .env.local.example     # Blueprint template for local environmental variables
-├── .gitignore             # Strict credential lockdown rules
-├── tailwind.config.ts     # Interface layout rules
-└── tsconfig.json          # TypeScript engine adjustments
+The application tracks operational states dynamically via URL query parameters. You can navigate between **four main user interfaces**:
+
+### 1. General Dashboard (`?view=public`)
+* **Purpose**: Public portal for organizational transparency.
+* **Usage**:
+  * View aggregate statistics: **Annual Allocation** (hardcoded to $500,000.00 baseline), **Liquidated Claims** (sum of approved expenses), and **Current Balance** (remaining funds).
+  * Inspect the **Approved Spending by Category** chart (supplies, transportation, and equipment).
+  * Audit the **Transaction Logs Feed** to review the latest adjustments and approved outlays.
+
+### 2. Secure Access Gate (`?view=login`)
+* **Purpose**: Redirects users to their corresponding dashboard desks.
+* **Usage**:
+  * Select either **Student Member Desk** or **Treasurer Operations Desk** to initiate write-access sessions.
+
+### 3. Student Member Desk (`?view=portal&role=member`)
+* **Purpose**: Submit claims and monitor individual request history.
+* **Usage**:
+  * **Submit Claim Form**: Fill out claimant email, name of item, expense amount (USD), choose category, and add an optional receipt image URL.
+  * **Status Monitoring**: Review your personal **Claim Status Logs** table. Claims start as `Under Review` and transition to `Approved` or `Rejected` in real-time.
+
+### 4. Treasurer Operations Desk (`?view=portal&role=treasurer`)
+* **Purpose**: Review queues, apply budget adjustments, and audit the global ledger.
+* **Usage**:
+  * **Pending Approvals Queue**: Review pending claims. Click **Approve** (deducts funds from balance and records audit trail) or **Reject** (requires typing a reason note).
+  * **Record Budget Adjustment**: Use the cash modifier tool to log **Cash Infusions/Top-ups** (adds to total budget) or **Budget Outflows** (deducts from total budget).
+  * **Global Ledger**: Inspect the immutable table tracking all liquidation records in the system.
+
+  ---
+### Try it:
+
+https://ledgely-eta.vercel.app/
+  ---
