@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Antigravity 2.0 
+.agent/cache/
+.agent/tmp/
+.agent/artifacts/
+
+# IDEs and System Tools
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
