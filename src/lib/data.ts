@@ -1,115 +1,90 @@
-import { notion, EXPENSES_DB_ID, BUDGET_LOG_DB_ID, isNotionConfigured } from './notion';
-import { mockStore, Expense, BudgetLog } from './mockStore';
+import { supabase } from './supabase';
 
-// Safe property accessors
-function getTitle(property: any): string {
-  if (!property) return '';
-  if (property.type === 'title') {
-    return property.title?.map((t: any) => t.plain_text).join('') || '';
-  }
-  return '';
+export interface Expense {
+  id: string;
+  title: string;
+  amount: number;
+  category: 'SUPPLIES' | 'TRANSPORTATION' | 'EQUIPMENT' | string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  submittedBy: string;
+  receiptUrl: string;
+  rejectionNote?: string;
+  date: string;
 }
 
-function getRichText(property: any): string {
-  if (!property) return '';
-  if (property.type === 'rich_text') {
-    return property.rich_text?.map((t: any) => t.plain_text).join('') || '';
-  }
-  return '';
+export interface BudgetLog {
+  id: string;
+  activity: string;
+  type: 'LOG_ENTRY' | 'BUDGET_ADJUSTMENT';
+  amountImpact: number;
+  timestamp: string;
 }
 
-function getNumber(property: any): number {
-  if (!property) return 0;
-  if (property.type === 'number') {
-    return property.number || 0;
-  }
-  return 0;
-}
-
-function getSelect(property: any): string {
-  if (!property) return '';
-  if (property.type === 'select') {
-    return property.select?.name || '';
-  }
-  if (property.type === 'status') {
-    return property.status?.name || '';
-  }
-  return '';
-}
-
-function getUrl(property: any): string {
-  if (!property) return '';
-  if (property.type === 'url') {
-    return property.url || '';
-  }
-  return '';
-}
-
-function getDate(property: any): string {
-  if (!property) return '';
-  if (property.type === 'date') {
-    return property.date?.start || '';
-  }
-  return '';
-}
-
+/**
+ * Fetches all expenses from the Supabase PostgreSQL database.
+ */
 export async function getExpenses(): Promise<Expense[]> {
-  if (!isNotionConfigured || !notion) {
-    return mockStore.getExpenses();
-  }
-
   try {
-    const response = await notion.databases.query({
-      database_id: EXPENSES_DB_ID,
-    });
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    return response.results.map((page: any) => {
-      const props = page.properties;
+    if (error) {
+      console.error('Error fetching expenses from Supabase:', error);
+      return [];
+    }
+
+    return (data || []).map((row: any) => {
+      // Map DB schema to UI compatibility
+      let uiStatus: 'Pending' | 'Approved' | 'Rejected' = 'Pending';
+      if (row.status === 'APPROVED') uiStatus = 'Approved';
+      if (row.status === 'REJECTED') uiStatus = 'Rejected';
+
       return {
-        id: page.id,
-        title: getTitle(props.Title) || getTitle(props.Name) || 'Untitled Expense',
-        amount: getNumber(props.Amount),
-        category: getSelect(props.Category),
-        status: (getSelect(props.Status) || 'Pending') as 'Pending' | 'Approved' | 'Rejected',
-        submittedBy: getRichText(props['Submitted By']),
-        receiptUrl: getUrl(props['Receipt URL']),
-        rejectionNote: getRichText(props['Rejection Note']),
-        date: getDate(props.Date) || new Date(page.created_time).toISOString().split('T')[0],
+        id: String(row.id),
+        title: row.title,
+        amount: Number(row.amount),
+        category: (row.category || '').toUpperCase(),
+        status: uiStatus,
+        submittedBy: row.submitted_by,
+        receiptUrl: row.receipt_url || '',
+        rejectionNote: '', // Note: rejection reasons are logged in the audit trail (budget_log)
+        date: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '',
       };
     });
-  } catch (error) {
-    console.error('Error fetching expenses from Notion, falling back to mock:', error);
-    return mockStore.getExpenses();
+  } catch (err) {
+    console.error('Failed to get expenses:', err);
+    return [];
   }
 }
 
+/**
+ * Fetches all budget log entries from the Supabase PostgreSQL database.
+ */
 export async function getBudgetLogs(): Promise<BudgetLog[]> {
-  if (!isNotionConfigured || !notion) {
-    return mockStore.getLogs();
-  }
-
   try {
-    const response = await notion.databases.query({
-      database_id: BUDGET_LOG_DB_ID,
-    });
+    const { data, error } = await supabase
+      .from('budget_log')
+      .select('*')
+      .order('timestamp', { ascending: false });
 
-    return response.results.map((page: any) => {
-      const props = page.properties;
+    if (error) {
+      console.error('Error fetching budget logs from Supabase:', error);
+      return [];
+    }
+
+    return (data || []).map((row: any) => {
       return {
-        id: page.id,
-        activity:
-          getTitle(props['Activity / Action']) ||
-          getTitle(props.Activity) ||
-          getTitle(props.Title) ||
-          getTitle(props.Name) ||
-          'Unknown Activity',
-        type: (getSelect(props.Type) || 'LOG_ENTRY') as 'LOG_ENTRY' | 'BUDGET_ADJUSTMENT',
-        amountImpact: getNumber(props['Amount Impact']),
-        timestamp: getDate(props.Timestamp) || page.created_time,
+        id: String(row.id),
+        activity: row.activity_action,
+        type: row.entry_type as 'LOG_ENTRY' | 'BUDGET_ADJUSTMENT',
+        amountImpact: Number(row.amount_impact),
+        timestamp: row.timestamp || new Date().toISOString(),
       };
     });
-  } catch (error) {
-    console.error('Error fetching budget logs from Notion, falling back to mock:', error);
-    return mockStore.getLogs();
+  } catch (err) {
+    console.error('Failed to get budget logs:', err);
+    return [];
   }
 }

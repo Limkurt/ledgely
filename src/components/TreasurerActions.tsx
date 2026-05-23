@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { reviewExpenseAction } from '@/app/actions/expense';
+import { reviewExpenseAction } from '@/app/actions';
 import { Check, X, Loader2, AlertCircle, ExternalLink, Calendar, User } from 'lucide-react';
-import { Expense } from '@/lib/mockStore';
+import { Expense } from '@/lib/data';
 
 interface TreasurerActionsProps {
   pendingExpenses: Expense[];

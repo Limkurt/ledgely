@@ -1,29 +1,24 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { submitExpenseAction } from '@/app/actions/expense';
+import { submitExpenseAction, ActionState } from '@/app/actions';
 import { Loader2, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'SUPPLIES', label: 'Supplies', color: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800/50' },
-  { value: 'FOOD_AND_BEVERAGE', label: 'Food & Beverage', color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800/50' },
   { value: 'TRANSPORTATION', label: 'Transportation', color: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50' },
-  { value: 'ACCOMMODATION', label: 'Accommodation', color: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800/50' },
   { value: 'EQUIPMENT', label: 'Equipment', color: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800/50' },
-  { value: 'MARKETING', label: 'Marketing', color: 'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800/50' },
-  { value: 'UTILITIES', label: 'Utilities', color: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800/50' },
-  { value: 'MISCELLANEOUS', label: 'Miscellaneous', color: 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700/50' },
 ];
 
-const initialState = {
+const initialState: ActionState = {
   success: false,
-  errors: {} as Record<string, string[]>,
+  errors: {},
 };
 
 export default function ExpenseForm() {
   const [state, formAction, isPending] = useActionState(submitExpenseAction, initialState);
   const [receiptUrl, setReceiptUrl] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('FOOD_AND_BEVERAGE');
+  const [selectedCategory, setSelectedCategory] = useState('SUPPLIES');
   const formRef = useRef<HTMLFormElement>(null);
 
   // Clear form on success
@@ -31,7 +26,7 @@ export default function ExpenseForm() {
     if (state.success && formRef.current) {
       formRef.current.reset();
       setReceiptUrl('');
-      setSelectedCategory('FOOD_AND_BEVERAGE');
+      setSelectedCategory('SUPPLIES');
     }
   }, [state.success]);
 
@@ -52,12 +47,12 @@ export default function ExpenseForm() {
         </div>
       )}
 
-      {state.errors.form && (
+      {state.errors?.form && (
         <div className="mb-6 flex items-start gap-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-800 dark:text-rose-400 p-4 rounded-xl text-sm animate-in fade-in slide-in-from-top-4">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div>
             <p className="font-medium">Failed to submit expense</p>
-            <p className="mt-0.5 opacity-90">{state.errors.form[0]}</p>
+            <p className="mt-0.5 opacity-90">{state.errors.form?.[0]}</p>
           </div>
         </div>
       )}
@@ -77,8 +72,8 @@ export default function ExpenseForm() {
               required
               className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent transition-all"
             />
-            {state.errors.submittedBy && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.submittedBy[0]}</p>
+            {state.errors?.submittedBy && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.submittedBy?.[0]}</p>
             )}
           </div>
 
@@ -95,8 +90,8 @@ export default function ExpenseForm() {
               required
               className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent transition-all"
             />
-            {state.errors.date && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.date[0]}</p>
+            {state.errors?.date && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.date?.[0]}</p>
             )}
           </div>
         </div>
@@ -115,8 +110,8 @@ export default function ExpenseForm() {
               required
               className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent transition-all"
             />
-            {state.errors.title && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.title[0]}</p>
+            {state.errors?.title && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.title?.[0]}</p>
             )}
           </div>
 
@@ -138,8 +133,8 @@ export default function ExpenseForm() {
                 className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-8 pr-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent transition-all"
               />
             </div>
-            {state.errors.amount && (
-              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.amount[0]}</p>
+            {state.errors?.amount && (
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.amount?.[0]}</p>
             )}
           </div>
         </div>
@@ -170,8 +165,8 @@ export default function ExpenseForm() {
           </div>
           {/* Hidden input to pass the category value */}
           <input type="hidden" name="category" value={selectedCategory} />
-          {state.errors.category && (
-            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.category[0]}</p>
+          {state.errors?.category && (
+            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.category?.[0]}</p>
           )}
         </div>
 
@@ -210,8 +205,8 @@ export default function ExpenseForm() {
               </div>
             )}
           </div>
-          {state.errors.receiptUrl && (
-            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.receiptUrl[0]}</p>
+          {state.errors?.receiptUrl && (
+            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.receiptUrl?.[0]}</p>
           )}
         </div>
 

@@ -1,12 +1,12 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
-import { addBudgetAdjustmentAction } from '@/app/actions/expense';
+import { addBudgetAdjustmentAction, ActionState } from '@/app/actions';
 import { Loader2, CheckCircle, AlertCircle, PlusCircle, MinusCircle } from 'lucide-react';
 
-const initialState = {
+const initialState: ActionState = {
   success: false,
-  errors: {} as Record<string, string[]>,
+  errors: {},
 };
 
 export default function BudgetAdjustmentForm() {
@@ -36,10 +36,10 @@ export default function BudgetAdjustmentForm() {
         </div>
       )}
 
-      {state.errors.form && (
+      {state.errors?.form && (
         <div className="mb-4 flex items-start gap-2.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-800 dark:text-rose-400 p-3.5 rounded-xl text-xs animate-in fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <p className="font-medium">{state.errors.form[0]}</p>
+          <p className="font-medium">{state.errors.form?.[0]}</p>
         </div>
       )}
 
@@ -113,8 +113,8 @@ export default function BudgetAdjustmentForm() {
               }
             }}
           />
-          {state.errors.amount && (
-            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.amount[0]}</p>
+          {state.errors?.amount && (
+            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.amount?.[0]}</p>
           )}
         </div>
 
@@ -131,8 +131,8 @@ export default function BudgetAdjustmentForm() {
             required
             className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-zinc-50 focus:border-transparent transition-all"
           />
-          {state.errors.description && (
-            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.description[0]}</p>
+          {state.errors?.description && (
+            <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{state.errors.description?.[0]}</p>
           )}
         </div>
 

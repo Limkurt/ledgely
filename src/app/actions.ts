@@ -2,25 +2,27 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { notion, isNotionConfigured, EXPENSES_DB_ID, BUDGET_LOG_DB_ID } from '@/lib/notion';
-import { mockStore } from '@/lib/mockStore';
+import { supabase } from '@/lib/supabase';
 
 export interface ActionState {
   success: boolean;
   errors: Record<string, string[] | undefined>;
 }
 
-// Category enum
-const CategoryEnum = z.enum([
-  'SUPPLIES',
-  'FOOD_AND_BEVERAGE',
-  'TRANSPORTATION',
-  'ACCOMMODATION',
-  'EQUIPMENT',
-  'MARKETING',
-  'UTILITIES',
-  'MISCELLANEOUS',
-]);
+// Category enum matching supplies, transportation, equipment (allowing case-insensitive forms)
+const CategoryEnum = z.preprocess(
+  (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+  z.enum([
+    'SUPPLIES',
+    'TRANSPORTATION',
+    'EQUIPMENT',
+    'FOOD_AND_BEVERAGE',
+    'ACCOMMODATION',
+    'MARKETING',
+    'UTILITIES',
+    'MISCELLANEOUS',
+  ])
+);
 
 // Validation Schema for Expense
 const expenseSchema = z.object({
@@ -28,12 +30,12 @@ const expenseSchema = z.object({
   amount: z.coerce.number().positive({ message: 'Amount must be a positive number.' }),
   category: CategoryEnum,
   submittedBy: z.string().email({ message: 'Please enter a valid email address.' }),
-  receiptUrl: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')),
+  receiptUrl: z.string().url({ message: 'Please enter a valid receipt image URL.' }).or(z.literal('')),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Please enter a valid date.' }),
 });
 
 /**
- * Server Action to submit an expense. Supports both Notion and Mock fallbacks.
+ * Server Action to submit an expense. Writes to Supabase 'expenses' table.
  */
 export async function submitExpenseAction(
   prevState: ActionState,
@@ -58,54 +60,29 @@ export async function submitExpenseAction(
   }
 
   const data = validation.data;
+  
+  // Clean category to match DB CHECK constraint ('supplies', 'transportation', 'equipment')
+  // Default non-supported categories to 'supplies' for postgres CHECK constraint safety
+  let dbCategory = data.category.toLowerCase();
+  if (!['supplies', 'transportation', 'equipment'].includes(dbCategory)) {
+    dbCategory = 'supplies';
+  }
 
   try {
-    if (isNotionConfigured && notion) {
-      const properties: any = {
-        Title: {
-          title: [{ text: { content: data.title } }],
-        },
-        Amount: {
-          number: data.amount,
-        },
-        Category: {
-          select: { name: data.category },
-        },
-        'Submitted By': {
-          rich_text: [{ text: { content: data.submittedBy } }],
-        },
-        'Receipt URL': {
-          url: data.receiptUrl || null,
-        },
-        Date: {
-          date: { start: data.date },
-        },
-      };
+    const { error } = await supabase
+      .from('expenses')
+      .insert([{
+        title: data.title,
+        amount: data.amount,
+        category: dbCategory,
+        status: 'UNDER_REVIEW',
+        submitted_by: data.submittedBy,
+        receipt_url: data.receiptUrl,
+        created_at: new Date(data.date).toISOString(),
+      }]);
 
-      try {
-        await notion.pages.create({
-          parent: { database_id: EXPENSES_DB_ID },
-          properties: {
-            ...properties,
-            Status: {
-              status: { name: 'Pending' },
-            },
-          },
-        });
-      } catch (err) {
-        // Fallback if Status is a select field instead of a status field
-        await notion.pages.create({
-          parent: { database_id: EXPENSES_DB_ID },
-          properties: {
-            ...properties,
-            Status: {
-              select: { name: 'Pending' },
-            },
-          },
-        });
-      }
-    } else {
-      await mockStore.addExpense(data);
+    if (error) {
+      throw error;
     }
 
     revalidatePath('/');
@@ -114,7 +91,7 @@ export async function submitExpenseAction(
       errors: {},
     };
   } catch (error: any) {
-    console.error('Error submitting expense:', error);
+    console.error('Error submitting expense to Supabase:', error);
     return {
       success: false,
       errors: {
@@ -124,7 +101,6 @@ export async function submitExpenseAction(
   }
 }
 
-// Alias for submitExpenseAction to match prompt request
 export const submitExpense = submitExpenseAction;
 
 /**
@@ -132,107 +108,50 @@ export const submitExpense = submitExpenseAction;
  */
 export async function reviewExpenseAction(
   id: string,
-  status: 'Approved' | 'Rejected',
+  status: 'Approved' | 'Rejected' | 'APPROVED' | 'REJECTED',
   rejectionNote: string = '',
   amount: number,
   title: string,
   submittedBy: string
 ) {
   try {
-    if (isNotionConfigured && notion) {
-      const properties: any = {
-        'Rejection Note': {
-          rich_text: [{ text: { content: rejectionNote } }],
-        },
-      };
+    // Map status to uppercase DB enum values
+    const dbStatus = (status === 'Approved' || status === 'APPROVED') ? 'APPROVED' : 'REJECTED';
 
-      try {
-        await notion.pages.update({
-          page_id: id,
-          properties: {
-            ...properties,
-            Status: {
-              status: { name: status },
-            },
-          },
-        });
-      } catch (err) {
-        // Fallback for select properties
-        await notion.pages.update({
-          page_id: id,
-          properties: {
-            ...properties,
-            Status: {
-              select: { name: status },
-            },
-          },
-        });
-      }
+    // 1. Update the claim status
+    const updatePromise = supabase
+      .from('expenses')
+      .update({ status: dbStatus })
+      .eq('id', Number(id));
 
-      // Add to live budget log database
-      const activity = status === 'Approved'
-        ? `Expense Approved: ${title} (Submitted by ${submittedBy})`
-        : `Expense Rejected: ${title} (${rejectionNote || 'No explanation provided'})`;
-      
-      const logProperties: any = {
-        Type: {
-          select: { name: 'LOG_ENTRY' },
-        },
-        'Amount Impact': {
-          number: status === 'Approved' ? -amount : 0,
-        },
-        Timestamp: {
-          date: { start: new Date().toISOString() },
-        },
-      };
+    // 2. Format activity log title and append to budget_log
+    const activity = dbStatus === 'APPROVED'
+      ? `Expense Approved: ${title} (Submitted by ${submittedBy})`
+      : `Expense Rejected: ${title} (${rejectionNote || 'No explanation provided'})`;
+    
+    const logPromise = supabase
+      .from('budget_log')
+      .insert([{
+        activity_action: activity,
+        entry_type: 'LOG_ENTRY',
+        amount_impact: dbStatus === 'APPROVED' ? -Number(amount) : 0,
+        timestamp: new Date().toISOString(),
+      }]);
 
-      // Handle Activity/Action title property safely
-      try {
-        await notion.pages.create({
-          parent: { database_id: BUDGET_LOG_DB_ID },
-          properties: {
-            ...logProperties,
-            'Activity / Action': {
-              title: [{ text: { content: activity } }],
-            },
-          },
-        });
-      } catch (err) {
-        try {
-          await notion.pages.create({
-            parent: { database_id: BUDGET_LOG_DB_ID },
-            properties: {
-              ...logProperties,
-              'Activity': {
-                title: [{ text: { content: activity } }],
-              },
-            },
-          });
-        } catch (err2) {
-          await notion.pages.create({
-            parent: { database_id: BUDGET_LOG_DB_ID },
-            properties: {
-              ...logProperties,
-              'Title': {
-                title: [{ text: { content: activity } }],
-              },
-            },
-          });
-        }
-      }
-    } else {
-      await mockStore.reviewExpense(id, status, rejectionNote);
-    }
+    // Await both operations concurrently
+    const [updateResult, logResult] = await Promise.all([updatePromise, logPromise]);
+
+    if (updateResult.error) throw updateResult.error;
+    if (logResult.error) throw logResult.error;
 
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
-    console.error('Error reviewing expense:', error);
+    console.error('Error reviewing expense in Supabase:', error);
     return { success: false, error: error?.message || 'Failed to review expense.' };
   }
 }
 
-// Alias to match prompt request
 export const reviewExpense = reviewExpenseAction;
 
 // Validation Schema for Budget Adjustment
@@ -265,54 +184,17 @@ export async function addBudgetAdjustmentAction(
   const data = validation.data;
 
   try {
-    if (isNotionConfigured && notion) {
-      const logProperties: any = {
-        Type: {
-          select: { name: 'BUDGET_ADJUSTMENT' },
-        },
-        'Amount Impact': {
-          number: data.amount,
-        },
-        Timestamp: {
-          date: { start: new Date().toISOString() },
-        },
-      };
+    const { error } = await supabase
+      .from('budget_log')
+      .insert([{
+        activity_action: data.description,
+        entry_type: 'BUDGET_ADJUSTMENT',
+        amount_impact: data.amount,
+        timestamp: new Date().toISOString(),
+      }]);
 
-      try {
-        await notion.pages.create({
-          parent: { database_id: BUDGET_LOG_DB_ID },
-          properties: {
-            ...logProperties,
-            'Activity / Action': {
-              title: [{ text: { content: data.description } }],
-            },
-          },
-        });
-      } catch (err) {
-        try {
-          await notion.pages.create({
-            parent: { database_id: BUDGET_LOG_DB_ID },
-            properties: {
-              ...logProperties,
-              'Activity': {
-                title: [{ text: { content: data.description } }],
-              },
-            },
-          });
-        } catch (err2) {
-          await notion.pages.create({
-            parent: { database_id: BUDGET_LOG_DB_ID },
-            properties: {
-              ...logProperties,
-              'Title': {
-                title: [{ text: { content: data.description } }],
-              },
-            },
-          });
-        }
-      }
-    } else {
-      await mockStore.addBudgetAdjustment(data.amount, data.description);
+    if (error) {
+      throw error;
     }
 
     revalidatePath('/');
@@ -321,7 +203,7 @@ export async function addBudgetAdjustmentAction(
       errors: {},
     };
   } catch (error: any) {
-    console.error('Error adding budget adjustment:', error);
+    console.error('Error adding budget adjustment to Supabase:', error);
     return {
       success: false,
       errors: {
