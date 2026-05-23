@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# <p align="center"><img src="./public/logo.png" alt="Ledgely Logo" width="120" /><br>Ledgely</p>
 
-## Getting Started
+<p align="center">
+  <strong>A premium, modern, ultra-lean liquidation tracker and real-time treasury dashboard.</strong><br>
+  Designed for rapid, friction-free financial organizational workflows.
+</p>
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+By bypassing traditional heavy database infrastructure, **Ledgely** integrates directly with the Notion API—transforming a standard Notion workspace into a secure relational database, back-office CRM, and immutable audit log. 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Built for high-speed efficiency, Ledgely allows members to submit expense claims in seconds while providing treasurers with a responsive, high-performance console for real-time authorizations and dynamic budget monitoring.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎨 System Architecture & Optimization Strategy
 
-## Learn More
+To achieve zero infrastructure bloat and maximize operational deployment speeds, Ledgely splits roles natively via lightweight state mechanics and leverages standard server rendering paradigms:
 
-To learn more about Next.js, take a look at the following resources:
+| Architectural Layer | Ledgely Lean Implementation Strategy |
+| :--- | :--- |
+| **Data Tier & Backend CRM** | **Notion API Client** (`@notionhq/client`) acting natively as a unified data layer. Tables represent Expenses, Budgets, and Log events directly. |
+| **Authentication & Roles** | **Pre-Shared Static Access Tokens** parsed via URL parameters (`?role=member` vs `?role=treasurer`) inside a unified layout, avoiding heavy auth provider boilerplate. |
+| **File Storage** | **Direct Image/File URL Submission** via standard form input blocks or native Notion block attachments, eliminating third-party S3/bucket complexity. |
+| **Real-Time Synchronicity** | **On-Demand Cache Invalidation** driven natively through server component layout updates and quick structural revalidation pipelines (`revalidatePath`). |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🗺️ Notion Workspace Schema Blueprint
 
-## Deploy on Vercel
+Before initiating your local development cluster, manually instantiate **two independent databases** within a dedicated parent page inside your Notion Workspace. Share page access explicitly with your workspace's Internal Integration Token.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 1. Expense Records Database (`NOTION_EXPENSES_DB_ID`)
+* **`Title`** *(Title Property)* — Item Name / Short Description
+* **`Amount`** *(Number Property)* — Formatted as currency
+* **`Category`** *(Select Property)* — Options: `SUPPLIES`, `FOOD_AND_BEVERAGE`, `TRANSPORTATION`, `ACCOMMODATION`, `EQUIPMENT`, `MARKETING`, `UTILITIES`, `MISCELLANEOUS`
+* **`Status`** *(Status Property)* — Options: `Pending` (Default), `Approved`, `Rejected`
+* **`Submitted By`** *(Email Property)* — Submitting organizational coordinates
+* **`Receipt URL`** *(URL Property)* — Pointer to digital receipt asset
+* **`Rejection Note`** *(Text Property)* — Context captured on review actions
+* **`Date`** *(Date Property)* — Transaction timeline stamp
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 2. Live Budget & Audit Log Database (`NOTION_BUDGET_DB_ID`)
+* **`Activity / Action`** *(Title Property)* — Log descriptive index (e.g., `[APPROVED] Laboratory Jumper Wires`)
+* **`Type`** *(Select Property)* — Options: `LOG_ENTRY`, `BUDGET_ADJUSTMENT`
+* **`Amount Impact`** *(Number Property)* — Negative for outlays, positive for top-up injections
+* **`Timestamp`** *(Date Property)* — Structural creation timeline
+
+---
+
+## 📁 Repository Directory Matrix
+
+```text
+ledgely/
+├── public/
+│   └── logo.png           # Your custom generated logo asset
+├── src/
+│   ├── app/
+│   │   ├── actions.ts     # High-speed server mutations engine (Zod validation + Notion sync)
+│   │   ├── layout.tsx     # Global styling sheet wrapping context
+│   │   └── page.tsx       # Unified role-aware dashboard (Dynamic server calculations)
+│   └── lib/
+│       └── notion.ts      # Notion Engine Client SDK initialization singleton
+├── .env.local.example     # Blueprint template for local environmental variables
+├── .gitignore             # Strict credential lockdown rules
+├── tailwind.config.ts     # Interface layout rules
+└── tsconfig.json          # TypeScript engine adjustments
